@@ -16,10 +16,11 @@ import sys
 STEP_SIZE   = 0.01
 WINDOW_SIZE = 0.02
 
-DECAY = 0.0001
-ATTACK = 0.001
+DECAY = 10000.0
+ATTACK = 1000.0
 RATIO = 0.1
-THRESH = 10
+THRESH = 3
+MAKEUP = 1.3
 
 numfiles = len(sys.argv) - 1
 wavfiles = []
@@ -71,30 +72,31 @@ added = STEP_SIZE * sample_rate
 
 # plot the second highest in each frequency
 for i in range(minlength):
-	print i * added
 	for j in range(minlengthvert):
 		ducked[i][j] = myFunc(dominant[i][j], ducked[i][j])
 
 	total = 0
 	for j in range(minlengthvert):
-		total += ducked[i][j] / minlengthvert
-	if i * added < len(automation):
+		total += ducked[i][j] / float(minlengthvert)
+	if i * added < len(automation) and total > THRESH:
 		automation[i * added] = total * RATIO
 
 # forward sweep through automation
 for i in range(len(automation)):
-	if i != 0 and (automation[i] < automation[i - 1] - DECAY):
-		automation[i] = automation[i - 1] - DECAY
+	if i != 0 and (automation[i] < automation[i - 1] - (1 / DECAY)):
+		automation[i] = automation[i - 1] - (1 / DECAY)
 
 # backward sweep through automation
 for i in reversed(range(len(automation))):
-	if (i != len(automation) - 1) and (automation[i] < automation[i + 1] - ATTACK):
-		automation[i] = automation[i + 1] - ATTACK
+	if (i != len(automation) - 1) and (automation[i] < automation[i + 1] - (1 / ATTACK)):
+		automation[i] = automation[i + 1] - (1 / ATTACK)
 
 plt.plot(automation)
 plt.show()
 
+
+
 # print filtered
-output =  asarray(wavfiles[1][1] * (1 - automation), 'int16')
+output =  asarray(wavfiles[1][1] * (1 - automation) * MAKEUP + wavfiles[0][1], 'int16')
 
 scipy.io.wavfile.write('output.wav', sample_rate, output)
